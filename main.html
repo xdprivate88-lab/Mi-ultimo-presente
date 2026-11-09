@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Bitácora de Madrugada — Notas para ti</title>
+  <!-- Fuentes de Google: Cormorant Garamond (serif), Caveat (manuscrita), Inter (UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-night: #080a0f;
+      --bg-radial: #141824;
+      --paper-dark: #131620;
+      --paper-edge: #1c2130;
+      --paper-lines: rgba(255, 255, 255, 0.03);
+      --accent-warm: #d4a373;
+      --accent-soft: rgba(212, 163, 115, 0.15);
+      --text-main: #e6e2d8;
+      --text-muted: #8b8d98;
+      --shadow-book: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 40px rgba(212, 163, 115, 0.04);
+      --transition-flip: 0.85s cubic-bezier(0.645, 0.045, 0.355, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: var(--bg-night);
+      background-image:
+        radial-gradient(circle at 50% 20%, rgba(212, 163, 115, 0.07) 0%, transparent 55%),
+        radial-gradient(circle at 50% 50%, var(--bg-radial) 0%, var(--bg-night) 100%);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    /* Fondo sutil de estrellas de madrugada */
+    .stars-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.45;
+      background-image:
+        radial-gradient(1px 1px at 15% 25%, #fff, transparent),
+        radial-gradient(1px 1px at 35% 75%, rgba(212,163,115,0.8), transparent),
+        radial-gradient(1.5px 1.5px at 60% 15%, #fff, transparent),
+        radial-gradient(1px 1px at 80% 45%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 25% 85%, rgba(212,163,115,0.6), transparent),
+        radial-gradient(1.2px 1.2px at 90% 80%, #fff, transparent),
+        radial-gradient(1px 1px at 48% 52%, rgba(255,255,255,0.5), transparent);
+      background-size: 100% 100%;
+      animation: twinkle 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.25; }
+      100% { opacity: 0.55; }
+    }
+
+    /* Contenedor principal de la app */
+    .app-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+      height: 100%;
+      max-height: 860px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 16px 20px;
+    }
+
+    /* Barra superior: progreso y botón de portada */
+    .top-bar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 4px 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .top-bar.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .btn-icon-text {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      transition: all 0.25s ease;
+    }
+
+    .btn-icon-text:hover {
+      color: var(--text-main);
+      border-color: rgba(212, 163, 115, 0.35);
+      background: rgba(212, 163, 115, 0.08);
+    }
+
+    .progress-container {
+      flex: 1;
+      max-width: 240px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #a67c52, var(--accent-warm));
+      border-radius: 999px;
+      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .page-counter {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 52px;
+      text-align: right;
+    }
+
+    /* Escenario 3D del Diario */
+    .book-stage {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      perspective: 2200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 4px 0 12px;
+    }
+
+    .book {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-height: 640px;
+      transform-style: preserve-3d;
+      border-radius: 14px 18px 18px 14px;
+      box-shadow: var(--shadow-book);
+    }
+
+    /* Lomo sutil del diario en el borde izquierdo */
+    .book::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 14px;
+      background: linear-gradient(90deg, rgba(0,0,0,0.65) 0%, rgba(212,163,115,0.08) 45%, rgba(0,0,0,0.2) 100%);
+      border-radius: 14px 0 0 14px;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    /* Cada hoja del diario */
+    .page {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: transform var(--transition-flip), box-shadow var(--transition-flip);
+      border-radius: 12px 18px 18px 12px;
+      cursor: default;
+      will-change: transform;
+    }
+
+    .page.flipped {
+      transform: rotateY(-180deg);
+      pointer-events: none;
+    }
+
+    /* Caras de la página (frente y reverso) */
+    .page-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 12px 18px 18px 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-front {
+      background-color: var(--paper-dark);
+      background-image:
+        linear-gradient(90deg, rgba(0,0,0,0.35) 0%, transparent 6%),
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 31px,
+          var(--paper-lines) 32px
+        );
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 32px 28px 28px 34px;
+    }
+
+    .page-back {
+      background-color: #0e1018;
+      transform: rotateY(180deg);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      box-shadow: inset -15px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Sombra dinámica al girar */
+    .page-shadow {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(0,0,0,0.45) 0%, transparent 40%);
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      pointer-events: none;
+    }
+
+    .page.flipped .page-shadow {
+      opacity: 1;
+    }
+
+    /* Estilos de la Portada */
+    .cover-front {
+      background:
+        radial-gradient(circle at 50% 30%, rgba(212, 163, 115, 0.12) 0%, transparent 65%),
+        linear-gradient(145deg, #161925 0%, #0d0f17 100%);
+      background-image:
+        radial-gradient(circle at 50% 30%, rgba(212, 163, 115, 0.12) 0%, transparent 65%),
+        linear-gradient(145deg, #161925 0%, #0d0f17 100%);
+      border: 1px solid rgba(212, 163, 115, 0.22);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 36px 28px;
+    }
+
+    .cover-ornament {
+      width: 48px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-warm), transparent);
+      margin: 16px auto;
+    }
+
+    .cover-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--accent-warm);
+      margin-bottom: 10px;
+    }
+
+    .cover-title {
+      font-family: 'Caveat', cursive;
+      font-size: clamp(2.5rem, 7vw, 3.6rem);
+      font-weight: 700;
+      color: #f3efe6;
+      line-height: 1.08;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .cover-dedication {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      margin-bottom: 34px;
+    }
+
+    .btn-open {
+      background: linear-gradient(135deg, rgba(212, 163, 115, 0.2), rgba(212, 163, 115, 0.08));
+      border: 1px solid rgba(212, 163, 115, 0.45);
+      color: #f5ebd9;
+      padding: 13px 28px;
+      border-radius: 999px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .btn-open:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, rgba(212, 163, 115, 0.3), rgba(212, 163, 115, 0.14));
+      box-shadow: 0 12px 30px rgba(212, 163, 115, 0.15);
+    }
+
+    .btn-open:active {
+      transform: translateY(0);
+    }
+
+    /* Contenido de las Notas */
+    .note-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(212, 163, 115, 0.15);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+
+    .note-title {
+      font-family: 'Caveat', cursive;
+      font-size: clamp(1.75rem, 4.5vw, 2.2rem);
+      font-weight: 600;
+      color: var(--accent-warm);
+      line-height: 1;
+    }
+
+    .note-tag {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .note-body {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 6px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.12rem, 2.8vw, 1.28rem);
+      line-height: 1.72;
+      color: var(--text-main);
+      letter-spacing: 0.01em;
+      user-select: text;
+    }
+
+    /* Scrollbar sutil para notas largas en pantallas pequeñas */
+    .note-body::-webkit-scrollbar {
+      width: 4px;
+    }
+    .note-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .note-body::-webkit-scrollbar-thumb {
+      background: rgba(212, 163, 115, 0.22);
+      border-radius: 999px;
+    }
+
+    .note-footer {
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: rgba(139, 141, 152, 0.65);
+      flex-shrink: 0;
+    }
+
+    /* Controles inferiores */
+    .bottom-controls {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .bottom-controls.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: var(--text-main);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(10px);
+      transition: all 0.25s ease;
+      min-width: 120px;
+      justify-content: center;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(212, 163, 115, 0.12);
+      border-color: rgba(212, 163, 115, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .nav-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.28;
+      cursor: not-allowed;
+    }
+
+    .swipe-hint {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      text-align: center;
+      opacity: 0.7;
+    }
+
+    @media (max-width: 520px) {
+      .app-wrapper {
+        padding: 12px 12px 16px;
+      }
+      .page-front {
+        padding: 24px 20px 22px 26px;
+      }
+      .nav-btn {
+        padding: 12px 14px;
+        min-width: 105px;
+        font-size: 0.84rem;
+      }
+      .swipe-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="stars-bg"></div>
+
+  <main class="app-wrapper">
+    <!-- Barra superior -->
+    <header class="top-bar" id="topBar">
+      <button class="btn-icon-text" id="btnCover" aria-label="Volver a la portada">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+        </svg>
+        Portada
+      </button>
+
+      <div class="progress-container" aria-hidden="true">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="page-counter" id="pageCounter">1 / 16</div>
+    </header>
+
+    <!-- Escenario 3D del libro -->
+    <section class="book-stage" id="bookStage">
+      <div class="book" id="book">
+        <!-- Las páginas se generan dinámicamente con JavaScript -->
+      </div>
+    </section>
+
+    <!-- Controles inferiores -->
+    <footer class="bottom-controls" id="bottomControls">
+      <button class="nav-btn" id="btnPrev" aria-label="Página anterior">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Anterior
+      </button>
+
+      <span class="swipe-hint">Usa las flechas ← → o desliza</span>
+
+      <button class="nav-btn" id="btnNext" aria-label="Página siguiente">
+        Siguiente
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </footer>
+  </main>
+
+  <script>
+    // Datos exactos de las 16 notas ordenadas cronológicamente
+    const notesData = [
+      {
+        title: "Nota 1",
+        tag: "Madrugada",
+        text: "Algo que nunca pensé que terminaria, terminó, no me haré el inocente, se que fue mi culpa, fui un inmaduro prepotente que no valoró lo que tenia, ahora simplemente lo he perdido, y realmente me siento destrozado. Haré estas notas, las enviaré en la madrugada, asi ella no las leera, al menos espero que en un futuro volvamos a hablar"
+      },
+      {
+        title: "Nota 2",
+        tag: "Madrugada",
+        text: "realmente nada ha mejorado tanto que digamos, aun duele, mucho, la ultima interaccion que tuve con ella solo demostró que quizá nunca volvamos, aunque me dio una cosa: Esperanza, es... lo unico que me queda de ella?"
+      },
+      {
+        title: "Nota 3",
+        tag: "Desahogo",
+        text: "Creo que he encontrado una forma de desahogo, mi mente ahora mismo no puede reconocer si está bien o no, solo lo he hecho, algunos videos que solian ser memes ahora son proyectadas, ahora yo soy el protagonista de esta proyectada?"
+      },
+      {
+        title: "Nota 4",
+        tag: "Esperanza",
+        text: "He vuelto a abrir roblox Studio, para hacer animaciones, con Moon Studio se que puedo, hace tiempo que no programo en roblox, mucho menos animaciones jajjasjasjsja, pero aun asi, solo quiero intentar recrear como se vio nuestra ultima interaccion. Esperanza"
+      },
+      {
+        title: "Nota 5",
+        tag: "Silencio",
+        text: "No dio reaccion alguna al video que hice en roblox studio, espero no haberla incomodado, mas, o haberle hecho mas daño, aun no le he hablado, realmente no tengo palabras que decirle, siento que muero, ya no soporto esto"
+      },
+      {
+        title: "Nota 6",
+        tag: "Madrugada",
+        text: "Pronto tengo parciales, espero tener las fuerzas para que me vaya bien, es.. dificil, mas lo es sin ella, aun me pregunto que me pasa, porque me sucede esto?, en que momento me comenzó a pasar esto"
+      },
+      {
+        title: "Nota 7",
+        tag: "Reflexión",
+        text: "Han pasado unos dias, y he reflexionado mas, socialmente hablando han habido MUCHOS cambios, pero no se, creo que no cambiará nada, al menos, no hara que ella vuelva"
+      },
+      {
+        title: "Nota 8",
+        tag: "Aceptación",
+        text: "despues de ver nuevamente los videos que hice anteriormente, me siento algo estupido, pero aun asi, se que en su momento significaron mucho para mi, actualmente he aceptado un poco mas la situación, pero sigue doliendo, hablé un poco con ella, pero he comprendido mas, que quizá no quede una pizca de amor hacia mi"
+      },
+      {
+        title: "Nota 9",
+        tag: "Nuevo comienzo",
+        text: "He perdido mi cuenta de instagram, nuevo comienzo, no? le escribiré por WhatsApp, lo ultimo que quiere que piense es que la bloqueé o algo, me da miedo tener contacto cero con ella, otra vez.."
+      },
+      {
+        title: "Nota 10",
+        tag: "Espera",
+        text: "Hablamos mucho por WhatsApp, mas de lo normal diria yo jsjsj, pero, de repente me dejó de responder, aun no me ha respondido, pasan los dias y no lo hace, supongo que no lo hará, es... incomodo?"
+      },
+      {
+        title: "Nota 11",
+        tag: "Madrugada",
+        text: "He decidido crear otra cuenta de instagram, se que ya no será igual, pero, nada, comenzar de nuevo, le envié solicitud de amistad, pero no la acepta, espero que en un futuro lo haga, aun no he dejado de amarla"
+      },
+      {
+        title: "Nota 12",
+        tag: "Ilusión",
+        text: "Aceptó mi solicitud, ya estamos hablando mas seguido, bueno, quiza no tanto, pero es mejor que no hablar creo. Se siente bien, pero me estoy ilusionando? porque siento que si podria funcionar otra vez, acaso mi mente se está engañando?, no entiendo, la Esperanza es la culpable?"
+      },
+      {
+        title: "Nota 13",
+        tag: "Duda",
+        text: "Como le hago saber que aun la amo sin arruinar todo?, realmente quiero que todo vuelva a ser como antes, pero, temo arruinar todo, que pensará ella... he estado enviandole mensajes \"disimuladamente\", pero, realmente siento que lo evade todo, y, mi esperanza aun no se va, no lo hará hasta que ella me lo diga a la cara?"
+      },
+      {
+        title: "Nota 14",
+        tag: "Confesión",
+        text: "esta es la nota numero 14 desde que todo terminó, finjo que no, pero aun te extraño, realmente han cambiado muchas cosas y son MUCHOS los errores que he reconocido y he estado cambiando, aun te amo, aunque solo pueda decir un \"te quiero\". Y si, duele un poco cuando respondes a esos elogios intentando evadirlos, pero te entiendo. Te agradezco por seguir hablando, mientras yo pueda, fingiré verte como una amiga, aunque en el fondo quiera volver contigo, volver a decirte te amo, volver a hacer planes juntos, volver a cruzar problemas juntos, superar pruebas. Lo aceptaré mas no lo superaré"
+      },
+      {
+        title: "Nota 15",
+        tag: "Madrugada",
+        text: "es esto... depresion? es extraño, realmente por mucho tiempo pensé que era un concepto tonto, sin sentido. No es que tenga el corazon roto y por eso este asi, que en el futuro conoceré a alguien mas y se me pasará, NO, nada de eso.. He estado investigando un poco acerca de la depresion, pero siento que es algo ¿tonto? identificarse con sintomas de eso, no creo que realmente lo sea si lo reconoces, o si?.. La verdad es que me esfuerzo en que no se note, sonrio mas, me muestro mas interactivo y asi mantengo la imagen optimista de siempre, la \"inmadura\".. No es culpa de ella, creo que es algo acumulativo, cosas que no puedo decir y otros factores suman. He perdido el sentido y pasion por muchas cosas, vuelvo a caer en los mismos errores y ya solo me queda fingir alegria en lo que alguna vez me la daba. Repito, no es culpa de ella, es mia. Debo admitir que con ella podia amortiguar mucha carga, pero realmente no la valoré como merecia, y me arrepiento cada dia de eso. La vida continua, no?.. Aun asi, Esperanza y Promesa son dos cosas que me motivan, a que algun dia, quiza y solo quiza, el amor florezca una vez mas.. Aceptaré si ya no es conmigo, aunque quiero que sea asi, no es mi decision, pero... yo siempre estaré para ti, sigo aqui, estando para ti"
+      },
+      {
+        title: "Nota Final",
+        tag: "Despedida",
+        text: "Esta es mi ultima nota, y reuniré todo el valor que nunca tuve para enviar todas las notas, para que las lea, era su objetivo no?, espero que no me deje de hablar, o que me sienta lastima, esta es la ultima nota, porque ya no le insistiré mas, porque ya aceptaré las cosas. De todos modos, en poco tiempo cumplo 18, asi que, este será mi ultimo intento. Se que la tristeza no se irá, y se que quizá su amor no volverá, quiza leyendo todo solo me sienta lastima y me intente consolar, pero aun asi.. Termino mi \"diario\" o \"pitacora diciendo\", Gracias, por ser tu, por permitirme amarte, por darme confianza, por crear un lazo conmigo, gracias. Una ultima vez.. Yo, te amo, Chefesita"
+      }
+    ];
+
+    const bookEl = document.getElementById('book');
+    const topBar = document.getElementById('topBar');
+    const bottomControls = document.getElementById('bottomControls');
+    const progressBar = document.getElementById('progressBar');
+    const pageCounter = document.getElementById('pageCounter');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnCover = document.getElementById('btnCover');
+    const bookStage = document.getElementById('bookStage');
+
+    // Estado: 0 = Portada, 1..16 = Notas
+    let currentPage = 0;
+    const totalNotes = notesData.length;
+    const pageElements = [];
+
+    // Construir portada + 16 páginas en orden inverso de z-index
+    function initBook() {
+      const totalSheets = totalNotes + 1; // Portada + 16 notas
+
+      // 1. Crear Portada (índice 0)
+      const coverPage = document.createElement('div');
+      coverPage.className = 'page';
+      coverPage.style.zIndex = totalSheets;
+      coverPage.innerHTML = `
+        <div class="page-face page-front cover-front">
+          <span class="cover-subtitle">Diario Personal</span>
+          <h1 class="cover-title">Bitácora de<br>Madrugada</h1>
+          <div class="cover-ornament"></div>
+          <p class="cover-dedication">Notas para ti</p>
+          <button class="btn-open" id="btnOpenBook">
+            Abrir diario
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+          <div class="page-shadow"></div>
+        </div>
+        <div class="page-face page-back"></div>
+      `;
+      bookEl.appendChild(coverPage);
+      pageElements.push(coverPage);
+
+      // 2. Crear las 16 Notas (índices 1..16)
+      notesData.forEach((note, idx) => {
+        const sheetIndex = idx + 1;
+        const page = document.createElement('div');
+        page.className = 'page';
+        page.style.zIndex = totalSheets - sheetIndex;
+
+        page.innerHTML = `
+          <div class="page-face page-front">
+            <div class="note-header">
+              <h2 class="note-title">${note.title}</h2>
+              <span class="note-tag">${note.tag}</span>
+            </div>
+            <div class="note-body">${note.text}</div>
+            <div class="note-footer">
+              <span>Bitácora de Madrugada</span>
+              <span>${sheetIndex} / ${totalNotes}</span>
+            </div>
+            <div class="page-shadow"></div>
+          </div>
+          <div class="page-face page-back"></div>
+        `;
+        bookEl.appendChild(page);
+        pageElements.push(page);
+      });
+
+      // Evento botón abrir diario
+      document.getElementById('btnOpenBook').addEventListener('click', () => {
+        goToPage(1);
+      });
+
+      updateUI();
+    }
+
+    // Navegar a una página específica (0 = portada, 1..16 = notas)
+    function goToPage(target) {
+      if (target < 0 || target > totalNotes) return;
+      currentPage = target;
+
+      pageElements.forEach((el, idx) => {
+        if (idx < currentPage) {
+          el.classList.add('flipped');
+        } else {
+          el.classList.remove('flipped');
+        }
+      });
+
+      updateUI();
+    }
+
+    function updateUI() {
+      const isCover = currentPage === 0;
+
+      topBar.classList.toggle('visible', !isCover);
+      bottomControls.classList.toggle('visible', !isCover);
+
+      if (!isCover) {
+        pageCounter.textContent = `${currentPage} / ${totalNotes}`;
+        const progress = (currentPage / totalNotes) * 100;
+        progressBar.style.width = `${progress}%`;
+      }
+
+      btnPrev.disabled = currentPage <= 0;
+      btnNext.disabled = currentPage >= totalNotes;
+    }
+
+    // Eventos de botones
+    btnPrev.addEventListener('click', () => goToPage(currentPage - 1));
+    btnNext.addEventListener('click', () => goToPage(currentPage + 1));
+    btnCover.addEventListener('click', () => goToPage(0));
+
+    // Navegación por teclado en PC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        if (currentPage < totalNotes) goToPage(currentPage + 1);
+      } else if (e.key === 'ArrowLeft') {
+        if (currentPage > 0) goToPage(currentPage - 1);
+      } else if ((e.key === 'Enter' || e.key === ' ') && currentPage === 0) {
+        e.preventDefault();
+        goToPage(1);
+      }
+    });
+
+    // Soporte táctil (Swipe izquierda/derecha en móviles)
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    bookStage.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    bookStage.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].screenX;
+      const touchEndY = e.changedTouches[0].screenY;
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+
+      // Solo detectar swipe horizontal si es mayor que el desplazamiento vertical
+      if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.2) {
+        if (diffX < 0 && currentPage < totalNotes) {
+          goToPage(currentPage + 1);
+        } else if (diffX > 0 && currentPage > 0) {
+          goToPage(currentPage - 1);
+        }
+      }
+    }, { passive: true });
+
+    // Inicializar al cargar
+    initBook();
+  </script>
+</body>
+</html>
